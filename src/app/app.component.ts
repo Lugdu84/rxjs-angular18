@@ -1,7 +1,7 @@
 import { AsyncPipe } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, Subscription } from 'rxjs';
+import { map, Observable, Subscription, tap } from 'rxjs';
 
 export type CallBackAvecString = (message: string) => void;
 
@@ -13,7 +13,18 @@ export type CallBackAvecString = (message: string) => void;
   styleUrl: './app.component.css',
 })
 export class AppComponent implements OnInit, OnDestroy {
-  observable$!: Observable<string>;
+  observable$ = new Observable<string>((observer) => {
+    console.info('2. Async Observable');
+    observer.next('O1 => Observable next');
+    setTimeout(() => {
+      observer.next('O2 => Observable next');
+      observer.complete();
+    }, 1500);
+  }).pipe(
+    takeUntilDestroyed(),
+    tap((valeur) => console.info('TAP', valeur)),
+    map((valeur) => valeur.toUpperCase())
+  );
   private subscription = new Subscription();
   ngOnInit() {
     const callBack: CallBackAvecString = (message: string) =>
@@ -30,16 +41,7 @@ export class AppComponent implements OnInit, OnDestroy {
       resolve(' P => Promise resolved');
     }).then(callBack);
 
-    // LAZY
-    this.observable$ = new Observable<string>((observer) => {
-      console.info('2. Async Observable');
-      observer.next('O1 => Observable next');
-      setTimeout(() => {
-        observer.next('O2 => Observable next');
-        observer.complete();
-      }, 1500);
-    });
-    let sub = this.observable$.pipe(takeUntilDestroyed()).subscribe({
+    let sub = this.observable$.subscribe({
       next: callBack,
       complete: () => console.info('O => Observable complete'),
     });
